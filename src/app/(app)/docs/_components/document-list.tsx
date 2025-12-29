@@ -11,7 +11,7 @@ import {
 import { DocuPilotDocument } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, ListTodo, Trash2 } from 'lucide-react';
+import { MessageSquare, ListTodo, Trash2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import {
   AlertDialog,
@@ -24,11 +24,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { deleteDoc, doc } from 'firebase/firestore';
+import { deleteDoc, doc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useState } from 'react';
 
 interface DocumentListProps {
   documents: DocuPilotDocument[];
@@ -38,22 +39,65 @@ interface DocumentListProps {
 export function DocumentList({ documents, highlightId }: DocumentListProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleDelete = async (documentId: string) => {
     if (!user) return;
+    setDeletingId(documentId);
+
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'documents', documentId));
-      toast({
-        title: 'Document deleted',
-        description: 'The document has been successfully removed.',
-      });
+        const batch = writeBatch(db);
+
+        // 1. Reference to the document to be deleted
+        const docRef = doc(db, 'users', user.uid, 'documents', documentId);
+
+        // 2. Find and delete associated tasks
+        const tasksQuery = query(
+            collection(db, 'users', user.uid, 'tasks'),
+            where('sourceDocumentId', '==', documentId)
+        );
+        const tasksSnapshot = await getDocs(tasksQuery);
+        tasksSnapshot.forEach((taskDoc) => {
+            batch.delete(taskDoc.ref);
+        });
+        
+        // 3. Find and delete associated chat conversations and their messages
+        const conversationsQuery = query(
+            collection(db, 'users', user.uid, 'conversations'),
+            where('documentId', '==', documentId)
+        );
+        const conversationsSnapshot = await getDocs(conversationsQuery);
+        
+        for (const convoDoc of conversationsSnapshot.docs) {
+            // Delete the conversation itself
+            batch.delete(convoDoc.ref);
+            // And delete all messages within it
+            const messagesCollection = collection(db, convoDoc.ref.path, 'messages');
+            const messagesSnapshot = await getDocs(messagesCollection);
+            messagesSnapshot.forEach((messageDoc) => {
+                batch.delete(messageDoc.ref);
+            });
+        }
+        
+        // Finally, delete the document itself
+        batch.delete(docRef);
+
+        // Commit the batch
+        await batch.commit();
+
+        toast({
+            title: 'Document and data deleted',
+            description: 'The document, its tasks, and chat history have been removed.',
+        });
     } catch (error: any) {
-      console.error('Error deleting document:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Deletion failed',
-        description: 'Could not delete the document. Please try again.',
-      });
+        console.error('Error deleting document and associated data:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Deletion failed',
+            description: 'Could not delete the document. Please try again.',
+        });
+    } finally {
+        setDeletingId(null);
     }
   };
 
@@ -108,10 +152,14 @@ export function DocumentList({ documents, highlightId }: DocumentListProps) {
                 </Link>
               </Button>
             </div>
-            <AlertDialog>
+             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="mr-2 h-4 w-4" />
+                <Button variant="destructive" size="sm" disabled={deletingId === doc.id}>
+                    {deletingId === doc.id ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Trash2 className="mr-2 h-4 w-4" />
+                    )}
                   Delete
                 </Button>
               </AlertDialogTrigger>
@@ -119,8 +167,7 @@ export function DocumentList({ documents, highlightId }: DocumentListProps) {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the document
-                    and all associated tasks.
+                    This will permanently delete the document, all its tasks, and its chat history. This action cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
