@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Card,
   CardContent,
@@ -10,14 +12,36 @@ import {
   MessageSquare,
   ListTodo,
 } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth";
+import { collection, query, where } from "firebase/firestore";
+import { useCollection } from "react-firebase-hooks/firestore";
+import { db } from "@/lib/firebase";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
-  // In a real app, you would fetch this data
+  const { user } = useAuth();
+
+  const [docsSnapshot, docsLoading] = useCollection(
+    user ? query(collection(db, 'documents'), where('userId', '==', user.uid)) : null
+  );
+
+  const [tasksSnapshot, tasksLoading] = useCollection(
+    user ? query(collection(db, 'tasks'), where('userId', '==', user.uid), where('isCompleted', '==', false)) : null
+  );
+  
+  // Note: The app currently creates sessions, but we don't have a page to view old sessions.
+  // We will count them here for the dashboard.
+  const [sessionsSnapshot, sessionsLoading] = useCollection(
+    user ? query(collection(db, 'chatSessions'), where('userId', '==', user.uid)) : null
+  );
+
   const stats = {
-    documents: 0,
-    tasks: 0,
-    conversations: 0,
+    documents: docsSnapshot?.size ?? 0,
+    tasks: tasksSnapshot?.size ?? 0,
+    conversations: sessionsSnapshot?.size ?? 0,
   }
+
+  const isLoading = docsLoading || tasksLoading || sessionsLoading;
 
   return (
     <div className="flex-1 space-y-4">
@@ -33,7 +57,7 @@ export default function DashboardPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.documents}</div>
+            {isLoading ? <Skeleton className="h-8 w-1/4"/> : <div className="text-2xl font-bold">{stats.documents}</div>}
             <p className="text-xs text-muted-foreground">
               Manage your uploaded documents
             </p>
@@ -47,7 +71,7 @@ export default function DashboardPage() {
             <ListTodo className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.tasks}</div>
+            {isLoading ? <Skeleton className="h-8 w-1/4"/> : <div className="text-2xl font-bold">{stats.tasks}</div>}
             <p className="text-xs text-muted-foreground">
               Action items from your documents
             </p>
@@ -61,7 +85,7 @@ export default function DashboardPage() {
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.conversations}</div>
+            {isLoading ? <Skeleton className="h-8 w-1/4"/> : <div className="text-2xl font-bold">{stats.conversations}</div>}
             <p className="text-xs text-muted-foreground">
               Chats with your documents
             </p>
