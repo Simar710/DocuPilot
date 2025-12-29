@@ -76,7 +76,7 @@ export function TaskItem({ task }: TaskItemProps) {
           aria-label="Mark task as complete"
           className="mt-1"
         />
-        <div className="flex-1 min-w-0" onClick={() => setIsExpanded(!isExpanded)}>
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
           <label
             htmlFor={`task-${task.id}`}
             className={cn(
