@@ -1,0 +1,192 @@
+/**
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model. All data is considered
+ * private and is accessible only by the user who created it. The security model
+ * ensures that one user cannot read, write, or even know about the existence
+ * of another user's data.
+ *
+ * Data Structure:
+ * The data is organized hierarchically, with all user-specific collections
+ * nested under a top-level `/users/{userId}` path. This structure includes a
+ * user's profile, their documents, conversations, and tasks. This colocation
+ * of a user's data simplifies security rules and improves query performance for
+ * user-centric applications.
+ *
+ * Key Security Decisions:
+ * - User Enumeration Disabled: Listing documents in the top-level `/users`
+ *   collection is explicitly forbidden to prevent attackers from discovering
+ *   a list of all user IDs.
+ * - Default Deny: All paths are closed by default. Access is only granted
+ *   through explicit `allow` statements.
+ * - Path-Based Authorization: Authorization is primarily based on the `userId`
+ *   wildcard in the document path, ensuring that a user can only access
+ *   documents within their own data tree. This is fast and not dependent on
+ *   document fields.
+ *
+ * Denormalization for Authorization:
+ * This ruleset validates the presence and correctness of a `userId` field on
+ * user-owned documents (like Documents, Tasks, Conversations). This ensures
+ * relational integrity between the document's path and its content. For example,
+ * a document created at `/users/USER_A/tasks/TASK_1` must contain the field
+ * `{ "userId": "USER_A" }`. This prevents data from being misplaced or
+ * associated with the wrong owner.
+ *
+ * Structural Segregation:
+ * The data model naturally segregates each user's data into its own document
+ * tree (e.g., `/users/{userId}/...`). This is an ideal pattern for security,
+ * as it prevents any possibility of data leakage between users at the rule level.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for readability and reuse.
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the provided userId.
+     * This is the cornerstone of the ownership model.
+     * @param userId The user ID to check against the request's auth UID.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Ensures an operation is performed by the owner on an existing document.
+     * CRITICAL for all update and delete operations.
+     * @param userId The owner's user ID.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Validates that a user is creating their own profile document and that
+     * the document ID within the data correctly matches their UID.
+     * @param userId The user ID from the path.
+     */
+    function isCreatingOwnProfile(userId) {
+      return isOwner(userId) && request.resource.data.id == userId;
+    }
+
+    /**
+     * Validates that a user is updating their own profile and that the
+     * unique ID field is not being changed.
+     * @param userId The user ID from the path.
+     */
+    function isUpdatingOwnProfile(userId) {
+      return isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * Validates a user is creating a resource (e.g., Task, Document) in their
+     * own data tree and the internal `userId` field is set correctly.
+     * @param userId The user ID from the path.
+     */
+    function isCreatingOwnedResource(userId) {
+      return isOwner(userId) && request.resource.data.userId == userId;
+    }
+
+    /**
+     * Validates a user is updating their own resource and the `userId` field
+     * remains immutable.
+     * @param userId The user ID from the path.
+     */
+    function isUpdatingOwnedResource(userId) {
+      return isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+    }
+
+
+    /**
+     * @description Secures the top-level collection of user profiles.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user can create their own profile document.
+     * @deny (list) No user can list all other user profiles.
+     * @principle Restricts access to a user's own data tree and allows self-creation.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isCreatingOwnProfile(userId);
+      allow update: if isUpdatingOwnProfile(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Secures documents uploaded by a user.
+     * @path /users/{userId}/documents/{documentId}
+     * @allow (create) An authenticated user can create a document in their own space.
+     * @deny (get) Another user cannot read this user's document.
+     * @principle Enforces strict ownership for all operations on a user's private data.
+     */
+    match /users/{userId}/documents/{documentId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isCreatingOwnedResource(userId);
+      allow update: if isUpdatingOwnedResource(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Secures the text chunks extracted from a user's document.
+     * @path /users/{userId}/documents/{documentId}/chunks/{chunkId}
+     * @allow (get) The document owner can read their own document chunks.
+     * @deny (update) Another user cannot modify document chunks.
+     * @principle Inherits ownership from the parent path, securing nested data.
+     */
+    match /users/{userId}/documents/{documentId}/chunks/{chunkId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.documentId == documentId;
+      allow update: if isExistingOwner(userId) && request.resource.data.documentId == resource.data.documentId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Secures conversations initiated by a user.
+     * @path /users/{userId}/conversations/{conversationId}
+     * @allow (list) A user can list their own past conversations.
+     * @deny (create) Another user cannot create a conversation on behalf of someone else.
+     * @principle Enforces strict ownership for all operations on a user's private data.
+     */
+    match /users/{userId}/conversations/{conversationId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isCreatingOwnedResource(userId);
+      allow update: if isUpdatingOwnedResource(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Secures the messages within a user's conversation.
+     * @path /users/{userId}/conversations/{conversationId}/messages/{messageId}
+     * @allow (create) The conversation owner can add new messages to their conversation.
+     * @deny (delete) Another user cannot delete messages from a conversation they don't own.
+     * @principle Inherits ownership from the parent path, securing nested data.
+     */
+    match /users/{userId}/conversations/{conversationId}/messages/{messageId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.conversationId == conversationId;
+      allow update: if isExistingOwner(userId) && request.resource.data.conversationId == resource.data.conversationId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Secures tasks created by a user.
+     * @path /users/{userId}/tasks/{taskId}
+     * @allow (update) A user can update the status of their own task.
+     * @deny (get) Another user cannot view a user's private tasks.
+     * @principle Enforces strict ownership for all operations on a user's private data.
+     */
+    match /users/{userId}/tasks/{taskId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isCreatingOwnedResource(userId);
+      allow update: if isUpdatingOwnedResource(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+  }
+}
