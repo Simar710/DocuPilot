@@ -46,6 +46,7 @@ export default function ChatPage() {
       const newSessionId = uuidv4();
       const sessionRef = doc(db, 'users', user.uid, 'conversations', newSessionId);
       await setDoc(sessionRef, {
+        id: newSessionId,
         userId: user.uid,
         documentId: selectedDoc.id,
         documentName: selectedDoc.name,
@@ -57,10 +58,24 @@ export default function ChatPage() {
       currentSessionId = newSessionId;
     }
 
+    if (!currentSessionId) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not create or find a chat session.',
+        });
+        setIsResponding(false);
+        return;
+    }
+
     const messagesCollection = collection(db, `users/${user.uid}/conversations/${currentSessionId}/messages`);
 
     // Add user message to Firestore
-    const userMessage: Omit<ChatMessageType, 'id' | 'createdAt'> = { role: 'user', content };
+    const userMessage: Omit<ChatMessageType, 'id' | 'createdAt'> = {
+      role: 'user',
+      content,
+      conversationId: currentSessionId,
+    };
     await addDoc(messagesCollection, { ...userMessage, createdAt: serverTimestamp() });
 
     try {
@@ -75,6 +90,7 @@ export default function ChatPage() {
         role: 'assistant',
         content: result.answer,
         citations: result.citations.map(c => ({ name: selectedDoc.name, id: selectedDoc.id, text: c.text, startIndex: c.startIndex, endIndex: c.endIndex })),
+        conversationId: currentSessionId,
       };
       await addDoc(messagesCollection, { ...agentMessage, createdAt: serverTimestamp() });
 
@@ -88,6 +104,7 @@ export default function ChatPage() {
        const agentMessage: Omit<ChatMessageType, 'id' | 'createdAt'> = {
         role: 'assistant',
         content: "Sorry, I ran into an error trying to answer that.",
+        conversationId: currentSessionId,
       };
       await addDoc(messagesCollection, { ...agentMessage, createdAt: serverTimestamp() });
     } finally {
