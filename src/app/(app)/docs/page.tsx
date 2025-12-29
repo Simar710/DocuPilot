@@ -10,14 +10,30 @@ import { DocumentList } from './_components/document-list';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileWarning } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 
 export default function DocsPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get('highlight');
+  
   const [value, loading, error] = useCollection(
     user ? query(collection(db, 'documents'), where('userId', '==', user.uid), orderBy('createdAt', 'desc')) : null
   );
 
   const documents = value?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as DocuPilotDocument));
+  
+  const highlightedDocRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (highlightId && !loading && documents) {
+      const element = document.getElementById(`doc-${highlightId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [highlightId, loading, documents]);
 
   return (
     <div className="space-y-6">
@@ -33,9 +49,9 @@ export default function DocsPage() {
 
       {loading && (
         <div className="grid gap-4">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
         </div>
       )}
 
@@ -49,7 +65,7 @@ export default function DocsPage() {
         </Alert>
       )}
 
-      {!loading && !error && documents && <DocumentList documents={documents} />}
+      {!loading && !error && documents && <DocumentList documents={documents} highlightId={highlightId} />}
     </div>
   );
 }

@@ -27,12 +27,14 @@ import {
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface DocumentListProps {
   documents: DocuPilotDocument[];
+  highlightId?: string | null;
 }
 
-export function DocumentList({ documents }: DocumentListProps) {
+export function DocumentList({ documents, highlightId }: DocumentListProps) {
   const { toast } = useToast();
 
   const handleDelete = async (documentId: string) => {
@@ -66,7 +68,14 @@ export function DocumentList({ documents }: DocumentListProps) {
   return (
     <div className="grid gap-4">
       {documents.map((doc) => (
-        <Card key={doc.id}>
+        <Card 
+          key={doc.id}
+          id={`doc-${doc.id}`}
+          className={cn(
+            'transition-all',
+            highlightId === doc.id && 'ring-2 ring-primary ring-offset-2'
+          )}
+        >
           <CardHeader>
             <CardTitle>{doc.name}</CardTitle>
             <CardDescription>
