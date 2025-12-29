@@ -19,7 +19,7 @@ export default function DocsPage() {
   const highlightId = searchParams.get('highlight');
   
   const [value, loading, error] = useCollection(
-    user ? query(collection(db, 'documents'), where('userId', '==', user.uid), orderBy('createdAt', 'desc')) : null
+    user ? query(collection(db, 'users', user.uid, 'documents'), orderBy('createdAt', 'desc')) : null
   );
 
   const documents = value?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as DocuPilotDocument));

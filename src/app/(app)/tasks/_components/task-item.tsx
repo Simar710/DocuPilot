@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/use-auth';
 
 interface TaskItemProps {
   task: Task;
@@ -15,9 +16,11 @@ interface TaskItemProps {
 
 export function TaskItem({ task }: TaskItemProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleCheckedChange = async (checked: boolean) => {
-    const taskRef = doc(db, 'tasks', task.id);
+    if (!user) return;
+    const taskRef = doc(db, 'users', user.uid, 'tasks', task.id);
     try {
       await updateDoc(taskRef, { isCompleted: checked });
     } catch (error) {

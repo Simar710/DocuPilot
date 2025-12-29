@@ -28,6 +28,7 @@ import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
 
 interface DocumentListProps {
   documents: DocuPilotDocument[];
@@ -36,10 +37,12 @@ interface DocumentListProps {
 
 export function DocumentList({ documents, highlightId }: DocumentListProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleDelete = async (documentId: string) => {
+    if (!user) return;
     try {
-      await deleteDoc(doc(db, 'documents', documentId));
+      await deleteDoc(doc(db, 'users', user.uid, 'documents', documentId));
       toast({
         title: 'Document deleted',
         description: 'The document has been successfully removed.',

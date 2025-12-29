@@ -25,13 +25,13 @@ export default function ChatPage() {
 
   // Fetch documents for the selector
   const [docsSnapshot, docsLoading, docsError] = useCollection(
-    user ? query(collection(db, 'documents'), where('userId', '==', user.uid), orderBy('createdAt', 'desc')) : null
+    user ? query(collection(db, 'users', user.uid, 'documents'), orderBy('createdAt', 'desc')) : null
   );
   const documents = docsSnapshot?.docs.map(d => ({ id: d.id, ...d.data() } as DocuPilotDocument)) || [];
 
   // Fetch messages for the active session
   const [messagesSnapshot, messagesLoading, messagesError] = useCollection(
-    activeSessionId ? query(collection(db, `chatSessions/${activeSessionId}/messages`), orderBy('createdAt', 'asc')) : null
+    (user && activeSessionId) ? query(collection(db, `users/${user.uid}/conversations/${activeSessionId}/messages`), orderBy('createdAt', 'asc')) : null
   );
   const messages = messagesSnapshot?.docs.map(d => ({ id: d.id, ...d.data() } as ChatMessageType)) || [];
 
@@ -44,7 +44,7 @@ export default function ChatPage() {
     // Create a new session if one doesn't exist
     if (!currentSessionId) {
       const newSessionId = uuidv4();
-      const sessionRef = doc(db, 'chatSessions', newSessionId);
+      const sessionRef = doc(db, 'users', user.uid, 'conversations', newSessionId);
       await setDoc(sessionRef, {
         userId: user.uid,
         documentId: selectedDoc.id,
@@ -57,7 +57,7 @@ export default function ChatPage() {
       currentSessionId = newSessionId;
     }
 
-    const messagesCollection = collection(db, `chatSessions/${currentSessionId}/messages`);
+    const messagesCollection = collection(db, `users/${user.uid}/conversations/${currentSessionId}/messages`);
 
     // Add user message to Firestore
     const userMessage: Omit<ChatMessageType, 'id' | 'createdAt'> = { role: 'user', content };
@@ -74,7 +74,7 @@ export default function ChatPage() {
       const agentMessage: Omit<ChatMessageType, 'id' | 'createdAt'> = {
         role: 'assistant',
         content: result.answer,
-        citations: result.citations.map(c => ({ name: selectedDoc.name, id: selectedDoc.id })),
+        citations: result.citations.map(c => ({ name: selectedDoc.name, id: selectedDoc.id, text: c.text, startIndex: c.startIndex, endIndex: c.endIndex })),
       };
       await addDoc(messagesCollection, { ...agentMessage, createdAt: serverTimestamp() });
 

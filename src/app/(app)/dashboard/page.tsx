@@ -22,17 +22,15 @@ export default function DashboardPage() {
   const { user } = useAuth();
 
   const [docsSnapshot, docsLoading] = useCollection(
-    user ? query(collection(db, 'documents'), where('userId', '==', user.uid)) : null
+    user ? query(collection(db, 'users', user.uid, 'documents')) : null
   );
 
   const [tasksSnapshot, tasksLoading] = useCollection(
-    user ? query(collection(db, 'tasks'), where('userId', '==', user.uid), where('isCompleted', '==', false)) : null
+    user ? query(collection(db, 'users', user.uid, 'tasks'), where('isCompleted', '==', false)) : null
   );
   
-  // Note: The app currently creates sessions, but we don't have a page to view old sessions.
-  // We will count them here for the dashboard.
   const [sessionsSnapshot, sessionsLoading] = useCollection(
-    user ? query(collection(db, 'chatSessions'), where('userId', '==', user.uid)) : null
+    user ? query(collection(db, 'users', user.uid, 'conversations')) : null
   );
 
   const stats = {

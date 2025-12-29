@@ -187,7 +187,8 @@
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "anonymous",
+      "google.com"
     ]
   },
   "firestore": {
@@ -197,7 +198,7 @@
         "definition": {
           "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/entities/User"
           },
           "description": "Stores user profiles. Documents in this collection are private to the user. 'userId' is the Firebase Auth UID.",
           "params": [
@@ -213,7 +214,7 @@
         "definition": {
           "entityName": "Document",
           "schema": {
-            "$ref": "#/backend/entities/Document"
+            "$ref": "#/entities/Document"
           },
           "description": "Stores documents uploaded by a user. Documents are private to the user. Includes denormalized 'userId' for authorization independence.",
           "params": [
@@ -233,7 +234,7 @@
         "definition": {
           "entityName": "Chunk",
           "schema": {
-            "$ref": "#/backend/entities/Chunk"
+            "$ref": "#/entities/Chunk"
           },
           "description": "Stores chunks of text extracted from a document. Chunks are private to the user who uploaded the document. Includes denormalized 'userId' for authorization independence.",
           "params": [
@@ -257,7 +258,7 @@
         "definition": {
           "entityName": "Conversation",
           "schema": {
-            "$ref": "#/backend/entities/Conversation"
+            "$ref": "#/entities/Conversation"
           },
           "description": "Stores conversations between a user and the application. Conversations are private to the user. Includes denormalized 'userId' for authorization independence.",
           "params": [
@@ -277,7 +278,7 @@
         "definition": {
           "entityName": "ChatMessage",
           "schema": {
-            "$ref": "#/backend/entities/ChatMessage"
+            "$ref": "#/entities/ChatMessage"
           },
           "description": "Stores messages within a conversation. Messages are private to the user who owns the conversation. Includes denormalized 'userId' for authorization independence.",
           "params": [
@@ -301,7 +302,7 @@
         "definition": {
           "entityName": "Task",
           "schema": {
-            "$ref": "#/backend/entities/Task"
+            "$ref": "#/entities/Task"
           },
           "description": "Stores tasks created by a user. Tasks are private to the user. Includes denormalized 'userId' for authorization independence.",
           "params": [
@@ -316,7 +317,6 @@
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to be secure, scalable, and debuggable, adhering to the core design principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). It leverages denormalization and structural segregation to simplify security rules and enable efficient data access.  \n\nAuthorization Independence is achieved by denormalizing authorization data. For instance, documents and chunks reside within user-specific subcollections, eliminating the need for `get()` calls to parent documents to determine access.  \n\nThe structure supports required QAPs by using path-based ownership for user-owned data and membership maps for collaborative data (though no collaboration is described in the app requirements). Segregation of data with different access needs is achieved by using dedicated subcollections for each user's data. Global roles are managed through the existence of documents in dedicated role collections (if such roles existed within the requirements, which they do not).\n\nThe error reported, 'Firebase: Error (auth/invalid-api-key).', is unrelated to data structure. It arises from a misconfigured or missing API key during Firebase initialization, meaning the structure recommendation cannot fix it."
+    ]
   }
 }

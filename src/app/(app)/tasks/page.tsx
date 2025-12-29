@@ -13,7 +13,7 @@ import { ListTodo } from 'lucide-react';
 export default function TasksPage() {
   const { user } = useAuth();
   const [value, loading, error] = useCollection(
-    user ? query(collection(db, 'tasks'), where('userId', '==', user.uid), orderBy('createdAt', 'desc')) : null
+    user ? query(collection(db, 'users', user.uid, 'tasks'), orderBy('createdAt', 'desc')) : null
   );
 
   const tasks = value?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Task));

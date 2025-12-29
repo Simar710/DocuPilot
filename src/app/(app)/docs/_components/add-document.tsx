@@ -83,7 +83,7 @@ export function AddDocument() {
     setIsLoading(true);
     try {
       // 1. Create the initial document in Firestore
-      const docRef = await addDoc(collection(db, 'documents'), {
+      const docRef = await addDoc(collection(db, 'users', user.uid, 'documents'), {
         userId: user.uid,
         name: values.name,
         content: values.content,
@@ -114,6 +114,7 @@ export function AddDocument() {
   }
 
   async function processDocumentAI(documentId: string, content: string) {
+    if (!user) return;
     try {
         const [summaryResult, actionItemsResult] = await Promise.all([
             generateDocumentSummary({ documentText: content }),
@@ -121,7 +122,7 @@ export function AddDocument() {
         ]);
 
         const batch = writeBatch(db);
-        const docRef = doc(db, "documents", documentId);
+        const docRef = doc(db, "users", user.uid, "documents", documentId);
         
         batch.update(docRef, { 
             summary: summaryResult.summary,
@@ -129,8 +130,8 @@ export function AddDocument() {
         });
 
         // Create tasks for each action item
-        if (actionItemsResult.actionItems.length > 0 && user) {
-            const tasksCollection = collection(db, 'tasks');
+        if (actionItemsResult.actionItems.length > 0) {
+            const tasksCollection = collection(db, 'users', user.uid, 'tasks');
             actionItemsResult.actionItems.forEach(item => {
                 const taskRef = doc(tasksCollection);
                 batch.set(taskRef, {
@@ -149,7 +150,7 @@ export function AddDocument() {
     } catch (aiError) {
         console.error("Error processing document with AI:", aiError);
         // Optionally update the document to show an error state
-        const docRef = doc(db, "documents", documentId);
+        const docRef = doc(db, "users", user.uid, "documents", documentId);
         await addDoc(collection(db, 'documents'), { summary: 'Failed to process document.' });
     }
   }
