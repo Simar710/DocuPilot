@@ -14,10 +14,12 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  createdAt: Timestamp;
-  documentId?: string;
-  citations?: { name: string; id: string }[];
-  isAgentStep?: boolean;
+  createdAt?: Timestamp;
+  citations?: {
+    startIndex: number;
+    endIndex: number;
+    text: string;
+  }[];
 }
 
 export interface ChatSession {
@@ -26,10 +28,8 @@ export interface ChatSession {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   firstMessage: string;
-  document?: {
-    id: string;
-    name: string;
-  };
+  documentId: string;
+  documentName: string;
 }
 
 export interface Task {
