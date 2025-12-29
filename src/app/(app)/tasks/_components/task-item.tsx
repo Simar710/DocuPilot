@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Task } from '@/lib/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -20,6 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 interface TaskItemProps {
   task: Task;
@@ -28,6 +30,7 @@ interface TaskItemProps {
 export function TaskItem({ task }: TaskItemProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleCheckedChange = async (checked: boolean) => {
     if (!user) return;
@@ -64,22 +67,27 @@ export function TaskItem({ task }: TaskItemProps) {
   }
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors">
-      <div className="flex items-center gap-4 flex-1 min-w-0">
+    <div className="flex items-start justify-between p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors">
+      <div className="flex items-start gap-4 flex-1 min-w-0">
         <Checkbox
           id={`task-${task.id}`}
           checked={task.isCompleted}
           onCheckedChange={handleCheckedChange}
           aria-label="Mark task as complete"
+          className="mt-1"
         />
-        <label
-          htmlFor={`task-${task.id}`}
-          className={`flex-1 cursor-pointer truncate ${
-            task.isCompleted ? 'text-muted-foreground line-through' : ''
-          }`}
-        >
-          {task.content}
-        </label>
+        <div className="flex-1 min-w-0" onClick={() => setIsExpanded(!isExpanded)}>
+          <label
+            htmlFor={`task-${task.id}`}
+            className={cn(
+              'cursor-pointer',
+              task.isCompleted ? 'text-muted-foreground line-through' : '',
+              !isExpanded && 'truncate'
+            )}
+          >
+            {task.content}
+          </label>
+        </div>
       </div>
       <div className="flex items-center ml-4">
         {task.sourceDocumentId && (
