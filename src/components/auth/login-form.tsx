@@ -38,7 +38,6 @@ export function LoginForm() {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       router.push('/dashboard');
     } catch (error: any) {
-      console.error(error);
       toast({
         title: 'Authentication failed',
         description: 'Please check your email and password.',
