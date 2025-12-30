@@ -99,25 +99,3 @@ Follow these instructions to get a local copy up and running for development and
    npm run dev
    ```
    The application should now be running at `http://localhost:3000`.
-
----
-
-## Deployment to Vercel
-
-This Next.js app is optimized for deployment on [Vercel](https://vercel.com/).
-
-1. **Push your code to a Git repository** (e.g., GitHub, GitLab).
-
-2. **Create a new Vercel project:**
-   - Go to your Vercel dashboard and click "Add New... > Project".
-   - Import your Git repository.
-
-3. **Configure Environment Variables:**
-   - In your Vercel project settings, navigate to the "Environment Variables" section.
-   - Add all the variables from your `.env.local` file (the Firebase and Gemini keys). These are essential for your deployed application to connect to the backend services.
-
-4. **Deploy:**
-   - Vercel will automatically detect that you're deploying a Next.js application and will configure the build settings for you.
-   - Click the "Deploy" button. Vercel will build and deploy your site.
-
-After a few moments, your DocuPilot application will be live!
