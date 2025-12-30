@@ -6,23 +6,16 @@ DocuPilot is a modern web application designed to help you manage and understand
 
 - **Secure Authentication**: Sign up and log in using email/password or a Google account, powered by Firebase Authentication.
 - **Document Management**: Upload `.txt` files or paste text content directly into the app. Your documents are stored securely in Firestore.
-  - **Note**: While there is no hard file size limit for uploads, AI processing is optimized for documents under 1 million characters. Larger documents may take longer to process or fail.
+  - **Note on Limits**: To ensure optimal performance, the following limits are in place:
+    - **Max Documents**: 10 per user.
+    - **File Uploads**: Up to 1 MB per `.txt` file, with a content limit of 200,000 characters.
+    - **Pasted Text**: Up to 100,000 characters.
 - **AI-Powered Insights**:
   - **Summarization**: Automatically generate concise summaries of your documents.
   - **Action Item Extraction**: AI identifies and creates a to-do list of actionable tasks from your text.
-- **Interactive Chat (RAG)**: Engage in a conversation with your documents. Ask questions and get answers with citations pointing back to the source text.
+- **Interactive Chat (RAG)**: Engage in a conversation with your documents. Ask questions and get answers with citations pointing back to the source text. User questions are limited to 4,000 characters.
 - **Task Management**: View all your extracted action items on a dedicated Tasks page, mark them as complete, and easily trace them back to their source document.
 - **Responsive UI**: A clean, modern, and responsive interface built with ShadCN UI and Tailwind CSS.
-
-## Tech Stack
-
-- **Framework**: [Next.js](https://nextjs.org/) (with App Router)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) & [ShadCN UI](https://ui.shadcn.com/)
-- **Database & Auth**: [Firebase](https://firebase.google.com/) (Firestore, Authentication)
-- **Generative AI**: [Google's Gemini model](https://deepmind.google/technologies/gemini/) via [Genkit](https://firebase.google.com/docs/genkit)
-- **Deployment**: Ready for [Vercel](https://vercel.com/)
-
----
 
 ## How It Works: AI & RAG
 
@@ -43,6 +36,16 @@ For the interactive **Chat** feature, DocuPilot implements a RAG pattern. This i
 5.  **Generation**: The model generates an answer based *only* on the context provided by those relevant chunks. This prevents the model from hallucinating or using outside knowledge, grounding its response firmly in the document's content. The retrieved chunks are also returned as "sources" or "citations" in the UI.
 
 This RAG approach allows you to have a detailed, in-context conversation with your private documents efficiently and accurately.
+
+---
+
+## Tech Stack
+
+- **Framework**: [Next.js](https://nextjs.org/) (with App Router)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) & [ShadCN UI](https://ui.shadcn.com/)
+- **Database & Auth**: [Firebase](https://firebase.google.com/) (Firestore, Authentication)
+- **Generative AI**: [Google's Gemini model](https://deepmind.google/technologies/gemini/) via [Genkit](https://firebase.google.com/docs/genkit)
+- **Deployment**: Ready for [Vercel](https://vercel.com/)
 
 ---
 
