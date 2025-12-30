@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useState } from 'react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface DocumentListProps {
   documents: DocuPilotDocument[];
@@ -133,9 +134,11 @@ export function DocumentList({ documents, highlightId }: DocumentListProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground line-clamp-3">
-              {doc.summary || 'Summary is being generated...'}
-            </p>
+            <ScrollArea className="h-20">
+                <p className="text-sm text-muted-foreground pr-4">
+                {doc.summary || 'Summary is being generated...'}
+                </p>
+            </ScrollArea>
           </CardContent>
           <CardFooter className="flex justify-between items-center">
             <div className="flex items-center gap-2">
