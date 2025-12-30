@@ -6,6 +6,7 @@ DocuPilot is a modern web application designed to help you manage and understand
 
 - **Secure Authentication**: Sign up and log in using email/password or a Google account, powered by Firebase Authentication.
 - **Document Management**: Upload `.txt` files or paste text content directly into the app. Your documents are stored securely in Firestore.
+  - **Note**: While there is no hard file size limit for uploads, AI processing is optimized for documents under 1 million characters. Larger documents may take longer to process or fail.
 - **AI-Powered Insights**:
   - **Summarization**: Automatically generate concise summaries of your documents.
   - **Action Item Extraction**: AI identifies and creates a to-do list of actionable tasks from your text.
@@ -20,6 +21,28 @@ DocuPilot is a modern web application designed to help you manage and understand
 - **Database & Auth**: [Firebase](https://firebase.google.com/) (Firestore, Authentication)
 - **Generative AI**: [Google's Gemini model](https://deepmind.google/technologies/gemini/) via [Genkit](https://firebase.google.com/docs/genkit)
 - **Deployment**: Ready for [Vercel](https://vercel.com/)
+
+---
+
+## How It Works: AI & RAG
+
+This project leverages the power of Large Language Models (LLMs) through a combination of direct prompting and a Retrieval-Augmented Generation (RAG) pattern.
+
+### Transformer Models (Gemini)
+At its core, DocuPilot uses **Google's Gemini**, a powerful, multimodal **transformer** model. Transformer architecture allows the model to weigh the importance of different words in a document, giving it a sophisticated understanding of context, nuance, and relationships in the text. This is used for:
+- **Summarization**: The model reads the entire document content and generates a concise summary.
+- **Action Item Extraction**: The model analyzes the text to identify and list out clear, actionable tasks.
+
+### Retrieval-Augmented Generation (RAG)
+For the interactive **Chat** feature, DocuPilot implements a RAG pattern. This is a powerful technique that makes the AI "knowledge-aware" of a specific document without needing to re-train the model. Here's the process:
+
+1.  **Chunking & Embedding**: When you start a chat, the source document is broken down into smaller, overlapping text "chunks". Each chunk is then converted into a numerical representation called a **vector embedding**. This embedding captures the semantic meaning of the text.
+2.  **User Question**: Your question is also converted into a vector embedding using the same model.
+3.  **Similarity Search**: The application performs a similarity search (in this case, a simple dot-product calculation) to find the text chunks from the document whose embeddings are most similar to your question's embedding. These are the "most relevant" pieces of information.
+4.  **Augmented Prompt**: The most relevant text chunks are then combined with your original question into a new, "augmented" prompt that is sent to the Gemini model.
+5.  **Generation**: The model generates an answer based *only* on the context provided by those relevant chunks. This prevents the model from hallucinating or using outside knowledge, grounding its response firmly in the document's content. The retrieved chunks are also returned as "sources" or "citations" in the UI.
+
+This RAG approach allows you to have a detailed, in-context conversation with your private documents efficiently and accurately.
 
 ---
 
