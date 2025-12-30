@@ -76,17 +76,19 @@ export function TaskItem({ task }: TaskItemProps) {
           aria-label="Mark task as complete"
           className="mt-1"
         />
-        <div className="flex-1 min-w-0" onClick={() => setIsExpanded(!isExpanded)}>
-          <label
-            htmlFor={`task-${task.id}`}
+        <div 
+            className="flex-1 min-w-0 cursor-pointer" 
+            onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <p
             className={cn(
-              'cursor-pointer',
+              'font-medium',
               task.isCompleted ? 'text-muted-foreground line-through' : '',
-              !isExpanded && 'truncate block'
+              isExpanded ? 'whitespace-normal' : 'truncate'
             )}
           >
             {task.content}
-          </label>
+          </p>
         </div>
       </div>
       <div className="flex items-center ml-4">
