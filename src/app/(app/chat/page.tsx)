@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { collection, query, where, orderBy, addDoc, serverTimestamp, doc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, addDoc, serverTimestamp, doc, setDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { DocuPilotDocument, ChatMessage as ChatMessageType, ChatSession } from '@/lib/types';
 import { DocumentSelector } from './_components/document-selector';
