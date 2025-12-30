@@ -33,12 +33,25 @@ import { db } from '@/lib/firebase';
 import { generateDocumentSummary } from '@/ai/flows/generate-document-summary';
 import { extractActionItems } from '@/ai/flows/extract-action-items-from-document';
 
+const MAX_PASTE_CHARS = 100000;
+const MAX_FILE_SIZE_MB = 1;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const MAX_FILE_CHARS = 200000;
+
 const formSchema = z.object({
   name: z.string().min(1, 'Document name is required.'),
-  content: z.string().min(50, 'Content must be at least 50 characters.'),
+  content: z
+    .string()
+    .min(50, 'Content must be at least 50 characters.')
+    .max(MAX_PASTE_CHARS, `Pasted content cannot exceed ${MAX_PASTE_CHARS.toLocaleString()} characters.`),
 });
 
-export function AddDocument() {
+interface AddDocumentProps {
+    docCount: number;
+    maxDocs: number;
+}
+
+export function AddDocument({ docCount, maxDocs }: AddDocumentProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
@@ -52,11 +65,28 @@ export function AddDocument() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        toast({
+          variant: 'destructive',
+          title: 'File too large',
+          description: `Please upload a file smaller than ${MAX_FILE_SIZE_MB} MB.`,
+        });
+        return;
+      }
+
       if (file.type === 'text/plain') {
         const reader = new FileReader();
         reader.onload = (e) => {
           const content = e.target?.result as string;
-          form.setValue('content', content);
+          if (content.length > MAX_FILE_CHARS) {
+             toast({
+                variant: 'destructive',
+                title: 'Document too long',
+                description: `File content cannot exceed ${MAX_FILE_CHARS.toLocaleString()} characters.`,
+             });
+             return;
+          }
+          form.setValue('content', content, { shouldValidate: true });
           form.setValue('name', file.name.replace('.txt', ''));
           toast({
             title: 'File content loaded',
@@ -78,6 +108,16 @@ export function AddDocument() {
     if (!user) {
       toast({ variant: 'destructive', title: 'You must be logged in' });
       return;
+    }
+    
+    if (docCount >= maxDocs) {
+        toast({
+            variant: 'destructive',
+            title: 'Document limit reached',
+            description: `You cannot have more than ${maxDocs} documents. Please delete one to add another.`,
+        });
+        setIsOpen(false);
+        return;
     }
 
     setIsLoading(true);
@@ -154,11 +194,13 @@ export function AddDocument() {
         await addDoc(collection(db, 'documents'), { summary: 'Failed to process document.' });
     }
   }
+  
+  const isAtDocLimit = docCount >= maxDocs;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button disabled={isAtDocLimit} title={isAtDocLimit ? `You have reached the maximum of ${maxDocs} documents` : 'Add a new document'}>
           <Plus className="-ml-1 mr-2 h-5 w-5" />
           Add Document
         </Button>
@@ -207,7 +249,7 @@ export function AddDocument() {
                             <p className="mb-2 text-sm text-muted-foreground">
                                 <span className="font-semibold">Click to upload</span> or drag and drop
                             </p>
-                            <p className="text-xs text-muted-foreground">Plain Text (.txt files only)</p>
+                            <p className="text-xs text-muted-foreground">.txt file, up to {MAX_FILE_SIZE_MB}MB</p>
                         </div>
                         <input id="dropzone-file" type="file" className="hidden" onChange={handleFileChange} accept=".txt" />
                     </label>

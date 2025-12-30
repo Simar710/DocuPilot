@@ -68,7 +68,7 @@ const chatWithDocumentFlow = ai.defineFlow(
 
     similarities.sort((a, b) => b.score - a.score);
 
-    const topK = 3;
+    const topK = 5;
     const relevantChunks = similarities.slice(0, topK).map(item => textChunks[item.index]);
 
     const context = relevantChunks.join('\n\n---\n\n');

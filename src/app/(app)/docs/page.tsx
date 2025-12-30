@@ -13,6 +13,8 @@ import { FileWarning } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
+const MAX_DOCS = 10;
+
 export default function DocsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -37,14 +39,14 @@ export default function DocsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold">Documents</h1>
-          <p className="text-muted-foreground">
-            Upload new documents or manage existing ones.
+           <p className="text-muted-foreground">
+            Manage your documents. You can have up to {MAX_DOCS} documents. ({documents?.length ?? 0}/{MAX_DOCS})
           </p>
         </div>
-        <AddDocument />
+        <AddDocument docCount={documents?.length ?? 0} maxDocs={MAX_DOCS}/>
       </div>
 
       {loading && (

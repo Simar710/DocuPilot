@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+const MAX_CHAT_MESSAGE_LENGTH = 4000;
 
 interface ChatInputProps {
   onSendMessage: (content: string) => void;
@@ -12,10 +15,19 @@ interface ChatInputProps {
 
 export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
   const [inputValue, setInputValue] = useState('');
+  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim()) {
+      if (inputValue.length > MAX_CHAT_MESSAGE_LENGTH) {
+        toast({
+          variant: 'destructive',
+          title: 'Message too long',
+          description: `Your message cannot exceed ${MAX_CHAT_MESSAGE_LENGTH.toLocaleString()} characters.`,
+        });
+        return;
+      }
       onSendMessage(inputValue);
       setInputValue('');
     }
