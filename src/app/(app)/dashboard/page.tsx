@@ -103,7 +103,7 @@ export default function DashboardPage() {
               Use the menu on the left to navigate:
             </p>
             <ul className="list-disc pl-5 mt-2 space-y-1 text-sm text-muted-foreground">
-                <li><span className="font-semibold text-foreground">Documents:</span> Upload new .txt files or paste text content. AI processing is optimized for content under 1 million characters.</li>
+                <li><span className="font-semibold text-foreground">Documents:</span> Upload new .txt files (up to 1MB/200k chars) or paste text (up to 100k chars).</li>
                 <li><span className="font-semibold text-foreground">Chat:</span> Start a conversation with your documents to ask questions and get insights.</li>
                 <li><span className="font-semibold text-foreground">Tasks:</span> View and manage action items extracted from your documents.</li>
             </ul>
