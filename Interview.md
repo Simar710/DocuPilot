@@ -33,7 +33,7 @@ DocuPilot is built with a modern, serverless, and AI-centric tech stack:
 -   **UI & Styling**: **React**, **ShadCN UI**, and **Tailwind CSS**.
 -   **Backend & Database**: **Firebase (Firestore & Auth)**.
 -   **Generative AI**: **Google Gemini** via **Genkit**.
--   **Infrastructure (Target Architecture)**: **AWS (ECS, Fargate, ALB, CloudFront)**.
+-   **Infrastructure (Target Architecture)**: **AWS (ECS, ALB, CloudFront)**.
 
 ---
 
@@ -50,29 +50,29 @@ DocuPilot is built with a modern, serverless, and AI-centric tech stack:
 
 ### 5. Enterprise AWS Architecture (For Amazon SDE Interview)
 
-**Interviewer:** "As an AWS Certified Solutions Architect, how did you design this for Amazon-scale production?"
+**Interviewer:** "As an AWS Certified Solutions Architect, how did you design this for Amazon-scale production while remaining cost-effective?"
 
-**Your Answer:** "To move DocuPilot into a production-grade AWS environment, I followed the **AWS Well-Architected Framework** with this enterprise-grade stack:"
+**Your Answer:** "To move DocuPilot into a production-grade AWS environment within the **Free Tier**, I designed a **Well-Architected** stack using **ECS on EC2**:"
 
-1.  **Compute: Amazon ECS with AWS Fargate**:
-    -   **Why**: I containerized the Next.js app using a multi-stage **Dockerfile**. Deploying to ECS Fargate provides a serverless container experience, eliminating server management while ensuring the app scales horizontally based on traffic.
+1.  **Compute: Amazon ECS with EC2 Launch Type**:
+    -   **Why**: I containerized the Next.js app using a multi-stage **Dockerfile**. Deploying to ECS on EC2 (using `t3.micro` instances) allows me to use the AWS Free Tier (750 hours/month) while still demonstrating container orchestration skills.
 
 2.  **Traffic Management: Application Load Balancer (ALB)**:
-    -   **Why**: I configured an ALB to distribute traffic across Fargate tasks in multiple **Availability Zones (AZs)**. This ensures high availability and fault tolerance.
+    -   **Why**: I configured an ALB to distribute traffic across containers in multiple **Availability Zones (AZs)**. This ensures high availability and fault tolerance.
 
 3.  **Content Delivery: Amazon CloudFront**:
     -   **Why**: I used CloudFront as a CDN to cache static assets at Edge Locations, reducing latency globally and protecting the origin with **AWS WAF**.
 
-4.  **Configuration: AWS Secrets Manager**:
-    -   **Why**: Instead of using `.env` files, I integrated the app with AWS Secrets Manager to securely fetch Firebase and Gemini credentials at runtime.
+4.  **Security: AWS Secrets Manager**:
+    -   **Why**: Instead of using `.env` files, I integrated the app with AWS Secrets Manager to securely fetch Firebase and Gemini credentials at runtime, which is a best practice for enterprise security.
 
 5.  **CI/CD: AWS CodePipeline & CodeBuild**:
     -   **Why**: I implemented a full CI/CD pipeline using the included `buildspec.yml`. Every commit triggers a build that pushes an image to **Amazon ECR** and performs a rolling update to the ECS service.
 
-**Resume Summary**: "Architected a scalable, high-availability deployment for DocuPilot using **Amazon ECS (Fargate)**, **ALB**, and **CloudFront**. Automated the production release cycle using **AWS CodePipeline** and **CodeBuild**, ensuring enterprise-grade security via **AWS Secrets Manager**."
+**Resume Summary**: "Architected a scalable, high-availability deployment for DocuPilot using **Amazon ECS (EC2 Type)**, **ALB**, and **CloudFront**. Automated the production release cycle using **AWS CodePipeline** and **CodeBuild**, ensuring enterprise-grade security via **AWS Secrets Manager**."
 
 ---
 
 ### 6. Key Decisions & Trade-offs
--   **Standalone Output**: I enabled `output: 'standalone'` in Next.js to optimize the Docker image size for AWS deployment.
--   **Multi-Stage Dockerfile**: This ensures the final production image is lean (only ~100MB) by stripping out dev dependencies and build tools.
+-   **Standalone Output**: I enabled `output: 'standalone'` in Next.js to optimize the Docker image size (~120MB) for efficient container deployment.
+-   **ECS on EC2 vs Fargate**: Chose EC2 Launch Type to leverage the 12-month Free Tier while maintaining full container orchestration capabilities.
