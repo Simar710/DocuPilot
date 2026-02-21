@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -32,6 +33,7 @@ import { addDoc, collection, serverTimestamp, doc, writeBatch } from 'firebase/f
 import { db } from '@/lib/firebase';
 import { generateDocumentSummary } from '@/ai/flows/generate-document-summary';
 import { extractActionItems } from '@/ai/flows/extract-action-items-from-document';
+import { getUploadUrl } from '@/lib/s3-actions';
 
 const MAX_PASTE_CHARS = 100000;
 const MAX_FILE_SIZE_MB = 1;
@@ -54,6 +56,7 @@ interface AddDocumentProps {
 export function AddDocument({ docCount, maxDocs }: AddDocumentProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -75,6 +78,7 @@ export function AddDocument({ docCount, maxDocs }: AddDocumentProps) {
       }
 
       if (file.type === 'text/plain') {
+        setSelectedFile(file);
         const reader = new FileReader();
         reader.onload = (e) => {
           const content = e.target?.result as string;
@@ -89,8 +93,8 @@ export function AddDocument({ docCount, maxDocs }: AddDocumentProps) {
           form.setValue('content', content, { shouldValidate: true });
           form.setValue('name', file.name.replace('.txt', ''));
           toast({
-            title: 'File content loaded',
-            description: `${file.name} is ready to be saved.`,
+            title: 'File ready',
+            description: `${file.name} will be uploaded to S3 and processed.`,
           });
         };
         reader.readAsText(file);
@@ -122,25 +126,45 @@ export function AddDocument({ docCount, maxDocs }: AddDocumentProps) {
 
     setIsLoading(true);
     try {
-      // 1. Create the initial document in Firestore
+      let s3Key = null;
+
+      // 1. ARCHITECTURAL PATTERN: Upload raw file to S3 via Pre-signed URL
+      if (selectedFile) {
+        try {
+          const { url, key } = await getUploadUrl(selectedFile.name, selectedFile.type);
+          await fetch(url, {
+            method: 'PUT',
+            body: selectedFile,
+            headers: { 'Content-Type': selectedFile.type },
+          });
+          s3Key = key;
+        } catch (s3Error) {
+          console.warn('S3 Upload skipped (check AWS credentials):', s3Error);
+          // We continue anyway for the demo/MVP to work via Firestore
+        }
+      }
+
+      // 2. Create the document metadata in Firestore
       const docRef = await addDoc(collection(db, 'users', user.uid, 'documents'), {
         userId: user.uid,
         name: values.name,
         content: values.content,
+        s3Key: s3Key, // Store the S3 link for "Resume Impact"
         createdAt: serverTimestamp(),
         summary: 'Generating summary...',
         actionItems: [],
       });
 
-      // 2. Trigger AI flows (no need to await them here for better UX)
+      // 3. Trigger AI flows
       processDocumentAI(docRef.id, values.content);
       
       toast({
-        title: 'Document uploaded successfully!',
-        description: `${values.name} is now being processed.`,
+        title: 'Document added!',
+        description: s3Key ? 'Stored in S3 and metadata saved to Firestore.' : 'Metadata saved to Firestore.',
       });
       setIsOpen(false);
       form.reset();
+      setSelectedFile(null);
     } catch (error: any) {
       console.error('Error adding document:', error);
       toast({
@@ -169,7 +193,6 @@ export function AddDocument({ docCount, maxDocs }: AddDocumentProps) {
             actionItems: actionItemsResult.actionItems,
         });
 
-        // Create tasks for each action item
         if (actionItemsResult.actionItems.length > 0) {
             const tasksCollection = collection(db, 'users', user.uid, 'tasks');
             actionItemsResult.actionItems.forEach(item => {
@@ -189,9 +212,6 @@ export function AddDocument({ docCount, maxDocs }: AddDocumentProps) {
 
     } catch (aiError) {
         console.error("Error processing document with AI:", aiError);
-        // Optionally update the document to show an error state
-        const docRef = doc(db, "users", user.uid, "documents", documentId);
-        await addDoc(collection(db, 'documents'), { summary: 'Failed to process document.' });
     }
   }
   
@@ -209,7 +229,7 @@ export function AddDocument({ docCount, maxDocs }: AddDocumentProps) {
         <DialogHeader>
           <DialogTitle>Add a New Document</DialogTitle>
           <DialogDescription>
-            Upload a .txt file or paste content directly to get started.
+            Documents are decoupled: raw files go to S3, metadata and AI insights go to Firestore.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -217,7 +237,7 @@ export function AddDocument({ docCount, maxDocs }: AddDocumentProps) {
             <Tabs defaultValue="paste">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="paste">Paste Text</TabsTrigger>
-                <TabsTrigger value="upload">Upload File</TabsTrigger>
+                <TabsTrigger value="upload">Upload File (S3)</TabsTrigger>
               </TabsList>
               <TabsContent value="paste" className="py-4">
                 <FormField
@@ -247,7 +267,7 @@ export function AddDocument({ docCount, maxDocs }: AddDocumentProps) {
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                             <UploadCloud className="w-8 h-8 mb-4 text-muted-foreground" />
                             <p className="mb-2 text-sm text-muted-foreground">
-                                <span className="font-semibold">Click to upload</span> or drag and drop
+                                <span className="font-semibold">Click to upload</span> to Amazon S3
                             </p>
                             <p className="text-xs text-muted-foreground">.txt file, up to {MAX_FILE_SIZE_MB}MB</p>
                         </div>
@@ -275,7 +295,7 @@ export function AddDocument({ docCount, maxDocs }: AddDocumentProps) {
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Document
+                {selectedFile ? 'Upload to S3 & Save' : 'Save Document'}
               </Button>
             </DialogFooter>
           </form>

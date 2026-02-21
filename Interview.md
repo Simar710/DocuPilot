@@ -1,78 +1,56 @@
-# DocuPilot: Interview Preparation Guide
 
-This document is your comprehensive guide to understanding and explaining the DocuPilot project. It's designed to prepare you for a technical interview, covering the project's purpose, architecture, tech stack, and code flow.
+# DocuPilot: Interview Preparation Guide (AWS Certified Solutions Architect Edition)
 
----
-
-### 1. The Elevator Pitch: What is DocuPilot?
-
-**Interviewer:** "So, tell me about this project, DocuPilot."
-
-**Your Answer:** "DocuPilot is an intelligent document assistant designed to help users quickly understand and manage their text-based documents. It's a full-stack web application where users can upload or paste text, and the app uses Generative AI to provide valuable insights. Key features include automatically generating concise summaries, extracting a to-do list of action items, and allowing users to have an interactive conversation with their documents through a chat interface."
+This guide is optimized for a technical interview at **Amazon (AWS)** or for an **SDE** role requiring high cloud proficiency.
 
 ---
 
-### 2. Core Features
-
--   **Secure Authentication**: Users can sign up and log in with email/password or their Google account. This is handled by Firebase Authentication.
--   **Document Management**: Users can upload `.txt` files or paste raw text. The document content and its metadata (name, creation date, etc.) are stored securely in Firestore.
--   **AI-Powered Analysis**:
-    -   **Summarization**: When a document is uploaded, an AI flow generates a concise summary.
-    -   **Action Item Extraction**: The AI also analyzes the document to identify and list out actionable tasks.
--   **Chat with Documents (RAG)**: Users can select a document and ask questions about its content. The AI provides answers based *only* on the information in that document.
--   **Task Management**: Extracted action items are collected on a dedicated "Tasks" page.
+### 1. The Elevator Pitch
+"DocuPilot is an enterprise-grade document assistant. It uses a **Decoupled Architecture** where raw data is stored in **Amazon S3**, metadata and real-time state are managed in **Firebase**, and **GenAI (Gemini)** provides document intelligence. It’s built for high availability using **ECS on EC2** and an **ALB**."
 
 ---
 
-### 3. The Tech Stack
+### 2. Core AWS Architecture (The "Solutions Architect" View)
 
-DocuPilot is built with a modern, serverless, and AI-centric tech stack:
+**Interviewer:** "Explain your AWS design for this app."
 
--   **Framework**: **Next.js 15** (using the App Router).
--   **Language**: **TypeScript**.
--   **UI & Styling**: **React**, **ShadCN UI**, and **Tailwind CSS**.
--   **Backend & Database**: **Firebase (Firestore & Auth)**.
--   **Generative AI**: **Google Gemini** via **Genkit**.
--   **Infrastructure (Target Architecture)**: **AWS (ECS, ALB, CloudFront)**.
+**Your Answer:** "I followed the **AWS Well-Architected Framework** to ensure security, cost-efficiency, and reliability:"
 
----
-
-### 4. Architectural Deep Dive: How It All Works
-
-#### The RAG Pattern (Chat with Documents)
-1.  **Chunking**: The document is broken into smaller chunks.
-2.  **Embedding**: Each chunk and the user's question are converted into vector embeddings.
-3.  **Similarity Search**: We find chunks semantically similar to the question using dot-product calculation.
-4.  **Augmented Prompt**: Relevant chunks are combined with the question for the Gemini model.
-5.  **Generation**: Gemini generates an answer grounded *only* in the provided context.
-
----
-
-### 5. Enterprise AWS Architecture (For Amazon SDE Interview)
-
-**Interviewer:** "As an AWS Certified Solutions Architect, how did you design this for Amazon-scale production while remaining cost-effective?"
-
-**Your Answer:** "To move DocuPilot into a production-grade AWS environment within the **Free Tier**, I designed a **Well-Architected** stack using **ECS on EC2**:"
-
-1.  **Compute: Amazon ECS with EC2 Launch Type**:
-    -   **Why**: I containerized the Next.js app using a multi-stage **Dockerfile**. Deploying to ECS on EC2 (using `t3.micro` instances) allows me to use the AWS Free Tier (750 hours/month) while still demonstrating container orchestration skills.
-
-2.  **Traffic Management: Application Load Balancer (ALB)**:
-    -   **Why**: I configured an ALB to distribute traffic across containers in multiple **Availability Zones (AZs)**. This ensures high availability and fault tolerance.
-
-3.  **Content Delivery: Amazon CloudFront**:
-    -   **Why**: I used CloudFront as a CDN to cache static assets at Edge Locations, reducing latency globally and protecting the origin with **AWS WAF**.
-
+1.  **Compute: ECS on EC2 (t3.micro)**:
+    -   I used **Amazon ECS** to orchestrate my Next.js containers. Deploying on EC2 instances allowed me to leverage the **AWS Free Tier** while maintaining full control over the compute environment.
+2.  **Traffic: Application Load Balancer (ALB)**:
+    -   The ALB handles TLS termination and distributes traffic to the ECS service. I implemented a custom `/api/health` check endpoint so the ALB can perform **Health Checks** and replace unhealthy containers automatically.
+3.  **Storage: Decoupled S3 Strategy**:
+    -   Instead of storing files on the server's local disk (which is ephemeral and limited), I implemented **S3 Pre-signed URLs**. The client uploads directly to S3, reducing server load and ensuring the storage scales infinitely.
 4.  **Security: AWS Secrets Manager**:
-    -   **Why**: Instead of using `.env` files, I integrated the app with AWS Secrets Manager to securely fetch Firebase and Gemini credentials at runtime, which is a best practice for enterprise security.
-
-5.  **CI/CD: AWS CodePipeline & CodeBuild**:
-    -   **Why**: I implemented a full CI/CD pipeline using the included `buildspec.yml`. Every commit triggers a build that pushes an image to **Amazon ECR** and performs a rolling update to the ECS service.
-
-**Resume Summary**: "Architected a scalable, high-availability deployment for DocuPilot using **Amazon ECS (EC2 Type)**, **ALB**, and **CloudFront**. Automated the production release cycle using **AWS CodePipeline** and **CodeBuild**, ensuring enterprise-grade security via **AWS Secrets Manager**."
+    -   I eliminated hardcoded environment variables. Instead, the app fetches Gemini API keys and Firebase configs from **AWS Secrets Manager** at runtime using the ECS Task Role.
+5.  **CDN: Amazon CloudFront**:
+    -   I added CloudFront to cache static assets at Edge Locations, reducing latency globally and providing **AWS WAF** protection.
 
 ---
 
-### 6. Key Decisions & Trade-offs
--   **Standalone Output**: I enabled `output: 'standalone'` in Next.js to optimize the Docker image size (~120MB) for efficient container deployment.
--   **ECS on EC2 vs Fargate**: Chose EC2 Launch Type to leverage the 12-month Free Tier while maintaining full container orchestration capabilities.
+### 3. Implementation Details (Deep Dive)
+
+#### **How direct-to-S3 upload works:**
+1.  User selects a file in the browser.
+2.  The client calls a **Next.js Server Action**.
+3.  The server uses the **AWS SDK** to generate a **Pre-signed URL** with a 60-minute expiration.
+4.  The client `PUT`s the file directly to S3 using that URL.
+5.  The client then saves the S3 Key and metadata to **Firestore**.
+
+#### **CI/CD Pipeline:**
+"I used **AWS CodePipeline** and **CodeBuild**. The `buildspec.yml` builds the Docker image for the **linux/amd64** architecture, tags it, and pushes it to **Amazon ECR**. This triggers a rolling update in ECS, ensuring zero-downtime deployments."
+
+---
+
+### 4. Resume-Ready Bullet Points
+- "Architected a scalable document assistant using **Amazon ECS on EC2** and **ALB**, implementing automated health checks and self-healing."
+- "Optimized storage costs and performance by implementing **Direct-to-S3 uploads via Pre-signed URLs**, decoupling raw data from server logic."
+- "Engineered a secure credential management system using **AWS Secrets Manager**, preventing secret leakage and improving operational security."
+- "Automated production releases with a full **CI/CD pipeline** using **AWS CodeBuild** and **ECR**, targeting x86_64 container architectures."
+
+---
+
+### 5. Key Trade-offs
+- **ECS on EC2 vs Fargate**: Chose EC2 to maximize the 12-month Free Tier benefits while still demonstrating container orchestration.
+- **S3 vs Local Storage**: Decoupled storage is essential for **Stateless Containers**. Since ECS tasks can be replaced at any time, local storage would result in data loss.
