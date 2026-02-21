@@ -8,8 +8,9 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
  * Demonstrates a "Decoupled Storage" architecture pattern.
  * 
  * SECURITY BEST PRACTICE: This client is configured to use the default credential provider chain.
- * In ECS, it will automatically use the IAM Task Role assigned to the container,
- * eliminating the need for AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+ * Since the app is deployed on ECS/EC2 with the 'DocuPilot-EC2-Role', the SDK will automatically
+ * fetch temporary credentials from the Instance Metadata Service (IMDS).
+ * No hardcoded AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY are required.
  */
 
 const s3Client = new S3Client({
@@ -19,14 +20,13 @@ const s3Client = new S3Client({
 /**
  * Generates a pre-signed URL for direct-to-S3 uploads.
  * This saves server resources (RAM/CPU) by offloading the upload to S3.
+ * 
+ * Target Bucket: docupilot-uploads
  */
 export async function getUploadUrl(fileName: string, contentType: string) {
-  const bucketName = process.env.AWS_S3_BUCKET_NAME;
+  // Use environment variable if provided, fallback to the specific bucket name
+  const bucketName = process.env.AWS_S3_BUCKET_NAME || 'docupilot-uploads';
   
-  if (!bucketName) {
-    throw new Error('S3 Bucket name is not configured');
-  }
-
   const key = `uploads/${Date.now()}-${fileName}`;
   
   const command = new PutObjectCommand({
@@ -35,7 +35,11 @@ export async function getUploadUrl(fileName: string, contentType: string) {
     ContentType: contentType,
   });
 
-  const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-  
-  return { url, key };
+  try {
+    const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    return { url, key };
+  } catch (error) {
+    console.error('Error generating pre-signed URL:', error);
+    throw new Error('Could not generate S3 upload URL. Check IAM Role permissions.');
+  }
 }
