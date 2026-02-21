@@ -22,8 +22,8 @@ This guide is optimized for a technical interview at **Amazon (AWS)** or for an 
     -   The ALB handles TLS termination and distributes traffic to the ECS service. I implemented a custom `/api/health` check endpoint so the ALB can perform **Health Checks** and replace unhealthy containers automatically.
 3.  **Storage: Decoupled S3 Strategy**:
     -   Instead of storing files on the server's local disk (which is ephemeral and limited), I implemented **S3 Pre-signed URLs**. The client uploads directly to S3, reducing server load and ensuring the storage scales infinitely.
-4.  **Security: AWS Secrets Manager**:
-    -   I eliminated hardcoded environment variables. Instead, the app fetches Gemini API keys and Firebase configs from **AWS Secrets Manager** at runtime using the ECS Task Role.
+4.  **Security: IAM Roles & Secrets Manager**:
+    -   I implemented **Least Privilege** by using **ECS Task Roles** instead of IAM User keys. The container fetches credentials automatically from the environment. I also use **AWS Secrets Manager** to inject Gemini API keys and Firebase configs at runtime.
 5.  **CDN: Amazon CloudFront**:
     -   I added CloudFront to cache static assets at Edge Locations, reducing latency globally and providing **AWS WAF** protection.
 
@@ -34,7 +34,7 @@ This guide is optimized for a technical interview at **Amazon (AWS)** or for an 
 #### **How direct-to-S3 upload works:**
 1.  User selects a file in the browser.
 2.  The client calls a **Next.js Server Action**.
-3.  The server uses the **AWS SDK** to generate a **Pre-signed URL** with a 60-minute expiration.
+3.  The server uses the **AWS SDK** (with Task Role permissions) to generate a **Pre-signed URL**.
 4.  The client `PUT`s the file directly to S3 using that URL.
 5.  The client then saves the S3 Key and metadata to **Firestore**.
 
@@ -46,7 +46,7 @@ This guide is optimized for a technical interview at **Amazon (AWS)** or for an 
 ### 4. Resume-Ready Bullet Points
 - "Architected a scalable document assistant using **Amazon ECS on EC2** and **ALB**, implementing automated health checks and self-healing."
 - "Optimized storage costs and performance by implementing **Direct-to-S3 uploads via Pre-signed URLs**, decoupling raw data from server logic."
-- "Engineered a secure credential management system using **AWS Secrets Manager**, preventing secret leakage and improving operational security."
+- "Enhanced security posture by utilizing **ECS Task Roles** for S3 access and **AWS Secrets Manager** for credential management, eliminating long-lived access keys."
 - "Automated production releases with a full **CI/CD pipeline** using **AWS CodeBuild** and **ECR**, targeting x86_64 container architectures."
 
 ---

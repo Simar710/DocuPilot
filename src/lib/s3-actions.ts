@@ -1,4 +1,3 @@
-
 'use server';
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -7,14 +6,14 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 /**
  * @fileOverview Server Actions for AWS S3 integration.
  * Demonstrates a "Decoupled Storage" architecture pattern.
+ * 
+ * SECURITY BEST PRACTICE: This client is configured to use the default credential provider chain.
+ * In ECS, it will automatically use the IAM Task Role assigned to the container,
+ * eliminating the need for AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
  */
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
 });
 
 /**
