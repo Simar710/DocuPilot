@@ -1,102 +1,315 @@
-# DocuPilot - Your Intelligent Document Assistant
-## 🔗 [Link](docupilot-alb-2119150112.us-east-2.elb.amazonaws.com)
+# DocuPilot – Your Intelligent Document Assistant
 
-DocuPilot is a modern web application designed to help you manage and understand your documents intelligently. Built with Next.js, Firebase, and Google's Gemini AI, it provides a seamless experience for uploading documents, extracting key information, and chatting with your content in a conversational way.
+## 🔗 [Live Application](http://docupilot-alb-2119150112.us-east-2.elb.amazonaws.com:980)
 
-## Features
+DocuPilot is a production-deployed intelligent document assistant built with **Next.js, Firebase, and Google Gemini AI**, running in a containerized AWS infrastructure using **Amazon ECS (EC2 launch type)**.
 
-- **Secure Authentication**: Sign up and log in using email/password or a Google account, powered by Firebase Authentication.
-- **Document Management**: Upload `.txt` files or paste text content directly into the app. Your documents are stored securely in Firestore.
-  - **Note on Limits**: To ensure optimal performance, the following limits are in place:
-    - **Max Documents**: 10 per user.
-    - **File Uploads**: Up to 1 MB per `.txt` file, with a content limit of 200,000 characters.
-    - **Pasted Text**: Up to 100,000 characters.
-- **AI-Powered Insights**:
-  - **Summarization**: Automatically generate concise summaries of your documents.
-  - **Action Item Extraction**: AI identifies and creates a to-do list of actionable tasks from your text.
-- **Interactive Chat (RAG)**: Engage in a conversation with your documents. Ask questions and get answers with citations pointing back to the source text. User questions are limited to 4,000 characters.
-- **Task Management**: View all your extracted action items on a dedicated Tasks page, mark them as complete, and easily trace them back to their source document.
-- **Responsive UI**: A clean, modern, and responsive interface built with ShadCN UI and Tailwind CSS.
-
-## How It Works: AI & RAG
-
-This project leverages the power of Large Language Models (LLMs) through a combination of direct prompting and a Retrieval-Augmented Generation (RAG) pattern.
-
-### Transformer Models (Gemini)
-At its core, DocuPilot uses **Google's Gemini**, a powerful, multimodal **transformer** model. Transformer architecture allows the model to weigh the importance of different words in a document, giving it a sophisticated understanding of context, nuance, and relationships in the text. This is used for:
-- **Summarization**: The model reads the entire document content and generates a concise summary.
-- **Action Item Extraction**: The model analyzes the text to identify and list out clear, actionable tasks.
-
-### Retrieval-Augmented Generation (RAG)
-For the interactive **Chat** feature, DocuPilot implements a RAG pattern. This is a powerful technique that makes the AI "knowledge-aware" of a specific document without needing to re-train the model. Here's the process:
-
-1.  **Chunking & Embedding**: When you start a chat, the source document is broken down into smaller, overlapping text "chunks". Each chunk is then converted into a numerical representation called a **vector embedding**. This embedding captures the semantic meaning of the text.
-2.  **User Question**: Your question is also converted into a vector embedding using the same model.
-3.  **Similarity Search**: The application performs a similarity search (in this case, a simple dot-product calculation) to find the text chunks from the document whose embeddings are most similar to your question's embedding. These are the "most relevant" pieces of information.
-4.  **Augmented Prompt**: The most relevant text chunks are then combined with your original question into a new, "augmented" prompt that is sent to the Gemini model.
-5.  **Generation**: The model generates an answer based *only* on the context provided by those relevant chunks. This prevents the model from hallucinating or using outside knowledge, grounding its response firmly in the document's content. The retrieved chunks are also returned as "sources" or "citations" in the UI.
-
-This RAG approach allows you to have a detailed, in-context conversation with your private documents efficiently and accurately.
+It allows users to securely upload documents, extract structured insights, and chat with their content using a Retrieval-Augmented Generation (RAG) pipeline.
 
 ---
 
-## Tech Stack
+# 🚀 Production Architecture (AWS Deployment)
 
-- **Framework**: [Next.js](https://nextjs.org/) (with App Router)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) & [ShadCN UI](https://ui.shadcn.com/)
-- **Database & Auth**: [Firebase](https://firebase.google.com/) (Firestore, Authentication)
-- **Generative AI**: [Google's Gemini model](https://deepmind.google/technologies/gemini/) via [Genkit](https://firebase.google.com/docs/genkit)
-- **Deployment**: Ready for [Vercel](https://vercel.com/)
+DocuPilot is deployed using a containerized cloud-native stack on AWS.
+
+## 🧱 Infrastructure Overview
+
+```
+Internet
+   |
+   v
+Application Load Balancer (ALB)
+   |
+   v
+Target Group (Port 3000)
+   |
+   v
+EC2 Instance (ECS Cluster)
+   |
+   v
+Docker Container (Next.js App)
+   |
+   v
+Firebase + Gemini APIs
+```
 
 ---
 
-## Getting Started
+## 🐳 Containerization
 
-Follow these instructions to get a local copy up and running for development and testing purposes.
+The application is:
 
-### Prerequisites
+- Dockerized via a custom `Dockerfile`
+- Built locally
+- Pushed to **Amazon Elastic Container Registry (ECR)**
 
-- [Node.js](https://nodejs.org/en) (v18 or newer recommended)
-- A Google account for Firebase
+The Docker image is stored in:
 
-### Setup
+> Amazon ECR (private container registry)
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/docupilot.git
-   cd docupilot
-   ```
+Each ECS deployment pulls the latest image from ECR.
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+---
 
-3. **Set up Firebase:**
-   This project is configured to work with Firebase. The necessary configuration files are already in the project, but they need to be populated with your specific Firebase project keys.
+## ☁️ Compute & Orchestration
 
-4. **Set up Environment Variables:**
-   Create a `.env.local` file in the root of your project. This file will hold your Firebase API keys. The application is set up to automatically populate this, but if you need to do it manually, you can get the values from your Firebase project settings.
+### Amazon ECS (EC2 Launch Type)
 
-   ```.env.local
-   NEXT_PUBLIC_FIREBASE_API_KEY=AIz...
-   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
-   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
-   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
-   NEXT_PUBLIC_FIREBASE_APP_ID=1:...
-   ```
-   
-   You will also need a Google AI API key for the Genkit flows. Get one from [Google AI Studio](https://aistudio.google.com/app/apikey).
-   
-   ```.env.local
-   # Add this to your .env.local
-   GEMINI_API_KEY=your-gemini-api-key
-   ```
+The deployment uses:
+
+- **ECS Cluster** → `docupilot-cluster`
+- **Task Definition** → `docupilot-task`
+- **Service** → `docupilot-service`
+
+The ECS Service:
+
+- Maintains one running task
+- Automatically restarts failed containers
+- Registers instances with the load balancer
+- Handles rolling deployments
+
+### EC2 Instance
+
+- Launch type: EC2 (not Fargate)
+- Joined to ECS cluster
+- Runs Docker container
+- Protected via security groups
+
+---
+
+## 🔐 Secrets & Security
+
+### AWS Secrets Manager
+
+All production secrets are securely stored:
+
+- Firebase configuration keys
+- Gemini API key
+
+Secret path:
+
+- docupilot/prod/secrets
 
 
-5. **Run the development server:**
-   ```bash
-   npm run dev
-   ```
-   The application should now be running at `http://localhost:3000`.
+Secrets are:
+
+- Retrieved via `ecsTaskExecutionRole`
+- Injected as environment variables at runtime
+- Never stored in the Docker image
+
+### IAM Roles
+
+Two IAM roles are configured:
+
+1. **EC2 Instance Role**
+   - ECS cluster communication
+   - ECR image pulls
+
+2. **ECS Task Execution Role**
+   - `secretsmanager:GetSecretValue`
+   - `kms:Decrypt` (if required)
+
+---
+
+## 🌐 Networking & Load Balancing
+
+### Application Load Balancer (ALB)
+
+- Internet-facing
+- Listener: Port 980 (HTTP)
+- Routes traffic to ECS targets on port 3000
+
+### Target Group
+
+- Target type: Instance
+- Protocol: HTTP
+- Port: 3000
+- Health checks enabled
+
+### Security Groups
+
+**ALB Security Group**
+- Allows inbound 980 (or 80) from the internet
+
+**EC2 Security Group**
+- Allows inbound 3000 only from the ALB security group
+
+Direct access to EC2 is blocked.
+
+---
+
+## 🔄 Deployment Flow
+
+To deploy a new version:
+
+1. Build Docker image
+2. Push image to ECR
+3. Create new Task Definition revision
+4. Update ECS Service
+5. Force new deployment
+
+ECS performs:
+
+- Rolling replacement
+- Health validation
+- Automatic target registration
+
+---
+
+# ✨ Features
+
+## 🔐 Authentication
+
+- Email/password login
+- Google OAuth login
+- Powered by Firebase Authentication
+- Production ALB domain authorized in Firebase console
+
+## 📄 Document Management
+
+- Upload `.txt` files (up to 1MB)
+- Paste text directly
+- Firestore document storage
+
+Limits:
+
+- 10 documents per user
+- 200,000 character file limit
+- 100,000 character paste limit
+
+## 🧠 AI-Powered Features
+
+### 1. Summarization
+Uses Gemini transformer model to generate structured summaries.
+
+### 2. Action Item Extraction
+Identifies actionable tasks from document content.
+
+### 3. RAG Chat System
+Users can:
+
+- Ask contextual questions
+- Receive grounded answers
+- View source citations
+
+---
+
+# 🧠 AI & RAG Architecture
+
+## Transformer Model (Gemini)
+
+DocuPilot uses Google Gemini to:
+
+- Understand semantic context
+- Extract structured data
+- Generate grounded responses
+
+---
+
+## Retrieval-Augmented Generation (RAG)
+
+### Step 1 – Chunking
+Documents are split into overlapping segments.
+
+### Step 2 – Embedding
+Each chunk is converted into vector embeddings.
+
+### Step 3 – Similarity Search
+User question embedding is compared against document embeddings using dot-product similarity.
+
+### Step 4 – Prompt Augmentation
+Top relevant chunks are injected into the model prompt.
+
+### Step 5 – Grounded Generation
+Gemini generates an answer strictly based on retrieved context.
+
+This prevents hallucinations and ensures citations.
+
+---
+
+# 🧰 Tech Stack
+
+## Frontend
+- Next.js (App Router)
+- Tailwind CSS
+- ShadCN UI
+
+## Backend Services
+- Firebase Firestore
+- Firebase Authentication
+- Google Gemini via Genkit
+
+## Cloud Infrastructure
+- Amazon ECS (EC2 Launch Type)
+- Amazon ECR
+- Amazon EC2
+- Application Load Balancer
+- AWS Secrets Manager
+- IAM Roles & Policies
+- VPC + Subnets
+
+---
+
+# 🛠️ Local Development
+
+## Prerequisites
+
+- Node.js v18+
+- Docker
+- Firebase project
+- Gemini API key
+
+---
+
+## Setup
+
+```bash
+git clone https://github.com/your-username/docupilot.git
+cd docupilot
+npm install
+```
+
+Create `.env.local`:
+
+```env.local
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+GEMINI_API_KEY=
+```
+
+Run development server:
+```bash
+npm run dev
+```
+
+Application will be available at:
+```bash
+http://localhost:3000
+```
+
+---
+
+## 🔒 Security Highlights
+
+- Secrets managed via AWS Secrets Manager  
+- IAM-based role permissions  
+- No API keys committed to repository  
+- ALB isolates public traffic  
+- EC2 instances not directly exposed  
+
+---
+
+## 🎯 What This Project Demonstrates
+
+- Containerized production deployment  
+- ECS orchestration (EC2 launch type)  
+- Load balancing & health checks  
+- IAM-based secret injection  
+- Secure OAuth production setup  
+- Retrieval-Augmented Generation (RAG) system design  
+- Cloud-native infrastructure architecture  
+
