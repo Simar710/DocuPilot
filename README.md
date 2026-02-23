@@ -1,6 +1,6 @@
 # DocuPilot – Your Intelligent Document Assistant
 
-## 🔗 [Live Application](http://docupilot-alb-2119150112.us-east-2.elb.amazonaws.com:980)
+## 🔗 [Live Application](docupilot-alb-2119150112.us-east-2.elb.amazonaws.com)
 
 DocuPilot is a production-deployed intelligent document assistant built with **Next.js, Firebase, and Google Gemini AI**, running in a containerized AWS infrastructure using **Amazon ECS (EC2 launch type)**.
 
